@@ -1,0 +1,58 @@
+# OUTBOUND K.K. — Sakura Rental Server (Apache)
+ErrorDocument 404 /404.html
+DirectoryIndex index.html
+
+RewriteEngine On
+
+# 0) Leave internal requests alone (e.g. serving 404.html for a missing page),
+#    so a missing page answers with a real 404 instead of a redirect to /404.html
+RewriteCond %{ENV:REDIRECT_STATUS} !^$
+RewriteRule ^ - [L]
+
+# 1) Always https://www.out-bounder.com (only for the real domain, so the initial sakura.ne.jp address keeps working)
+#    Sakura terminates SSL on a proxy: X-Sakura-Forwarded-For is empty on plain http requests
+RewriteCond %{HTTP_HOST} ^out-bounder\.com$ [NC]
+RewriteRule ^(.*)$ https://www.out-bounder.com/$1 [R=301,L]
+RewriteCond %{HTTP_HOST} ^www\.out-bounder\.com$ [NC]
+RewriteCond %{HTTP:X-Sakura-Forwarded-For} ^$
+RewriteRule ^(.*)$ https://www.out-bounder.com/$1 [R=301,L]
+
+# 2) Old WordPress URLs (?page_id=, ?lang=en) -> new pages (query string dropped)
+# Japanese pages
+RewriteCond %{QUERY_STRING} (^|&)page_id=(666|701|731)(&|$)
+RewriteRule ^(index\.php)?$ /ja/ [R=301,QSD,L]
+RewriteCond %{QUERY_STRING} (^|&)page_id=696(&|$)
+RewriteRule ^(index\.php)?$ /ja/#services [R=301,NE,QSD,L]
+RewriteCond %{QUERY_STRING} (^|&)page_id=1608(&|$)
+RewriteRule ^(index\.php)?$ /ja/#work [R=301,NE,QSD,L]
+RewriteCond %{QUERY_STRING} (^|&)page_id=722(&|$)
+RewriteRule ^(index\.php)?$ /ja/#contact [R=301,NE,QSD,L]
+# English pages
+RewriteCond %{QUERY_STRING} (^|&)page_id=443(&|$)
+RewriteRule ^(index\.php)?$ /#services [R=301,NE,QSD,L]
+RewriteCond %{QUERY_STRING} (^|&)page_id=1647(&|$)
+RewriteRule ^(index\.php)?$ /#work [R=301,NE,QSD,L]
+RewriteCond %{QUERY_STRING} (^|&)page_id=450(&|$)
+RewriteRule ^(index\.php)?$ /#contact [R=301,NE,QSD,L]
+RewriteCond %{QUERY_STRING} (^|&)(page_id|p)=[0-9]+(&|$) [OR]
+RewriteCond %{QUERY_STRING} (^|&)lang=en(&|$)
+RewriteRule ^(index\.php)?$ / [R=301,QSD,L]
+
+# 3) Old WordPress paths
+RewriteRule ^(wp-admin|wp-content|wp-includes|feed)(/.*)?$ / [R=301,QSD,L]
+RewriteRule ^(wp-login\.php|xmlrpc\.php|index\.php)$ / [R=301,QSD,L]
+
+# Caching
+<IfModule mod_expires.c>
+  ExpiresActive On
+  ExpiresByType image/webp "access plus 1 year"
+  ExpiresByType image/png "access plus 1 year"
+  ExpiresByType image/svg+xml "access plus 1 year"
+  ExpiresByType text/css "access plus 1 week"
+  ExpiresByType text/html "access plus 0 seconds"
+</IfModule>
+<IfModule mod_headers.c>
+  Header always set X-Content-Type-Options "nosniff"
+  Header always set Referrer-Policy "strict-origin-when-cross-origin"
+</IfModule>
+AddType image/webp .webp
